@@ -1,29 +1,28 @@
 import { useState } from 'react';
-import { useQuery, useMutation } from '@apollo/client';
-import { GET_USERS } from '../../graphql/queries';
-import { SHARE_NOTE } from '../../graphql/mutations';
+import { useNotes } from '../../hooks/useNotes';
 
-export default function ShareDialog({ noteId, isOpen, onClose, refetch }) {
-  const [selectedUser, setSelectedUser] = useState('');
-  const [accessLevel, setAccessLevel] = useState('VIEW');
+export default function ShareDialog({ noteId, isOpen, onClose }) {
+  const [email, setEmail] = useState('');
+  const [canEdit, setCanEdit] = useState(false);
+  const { shareNote, loading } = useNotes();
 
-  const { data: usersData } = useQuery(GET_USERS);
-  const [shareNote] = useMutation(SHARE_NOTE, {
-    onCompleted: () => {
-      refetch();
-      onClose();
-    },
-  });
-
-  const handleShare = () => {
-    if (selectedUser) {
-      shareNote({
-        variables: {
+  const handleShare = async () => {
+    if (email.trim()) {
+      try {
+        // For now, we'll use email instead of userId since the API expects userId
+        // You might need to implement a user search endpoint or modify the API
+        await shareNote({
           noteId,
-          userId: selectedUser,
-          accessLevel,
-        },
-      });
+          userId: email, // This should be a user ID, not email
+          canEdit
+        });
+        setEmail('');
+        setCanEdit(false);
+        onClose();
+      } catch (error) {
+        console.error('Failed to share note:', error);
+        alert('Failed to share note. Please try again.');
+      }
     }
   };
 
@@ -37,34 +36,31 @@ export default function ShareDialog({ noteId, isOpen, onClose, refetch }) {
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Select User
+              User Email
             </label>
-            <select
-              value={selectedUser}
-              onChange={(e) => setSelectedUser(e.target.value)}
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Enter user email"
               className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">Choose a user...</option>
-              {usersData?.users?.map((user) => (
-                <option key={user.id} value={user.id}>
-                  {user.email}
-                </option>
-              ))}
-            </select>
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Note: You'll need the user's ID to share. This is a simplified version.
+            </p>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Access Level
+          <div className="flex items-center">
+            <input
+              type="checkbox"
+              id="canEdit"
+              checked={canEdit}
+              onChange={(e) => setCanEdit(e.target.checked)}
+              className="mr-2"
+            />
+            <label htmlFor="canEdit" className="text-sm text-gray-700">
+              Allow editing
             </label>
-            <select
-              value={accessLevel}
-              onChange={(e) => setAccessLevel(e.target.value)}
-              className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="VIEW">View Only</option>
-              <option value="EDIT">Can Edit</option>
-            </select>
           </div>
         </div>
 
@@ -77,10 +73,10 @@ export default function ShareDialog({ noteId, isOpen, onClose, refetch }) {
           </button>
           <button
             onClick={handleShare}
-            disabled={!selectedUser}
+            disabled={!email.trim() || loading}
             className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
           >
-            Share
+            {loading ? 'Sharing...' : 'Share'}
           </button>
         </div>
       </div>

@@ -1,8 +1,8 @@
 import { gql } from '@apollo/client';
 
-export const GET_MY_NOTES = gql`
-  query GetMyNotes {
-    myNotes {
+export const GET_NOTES = gql`
+  query GetNotes {
+    notes {
       id
       title
       content
@@ -11,8 +11,10 @@ export const GET_MY_NOTES = gql`
       isShared
       sharedWith {
         id
-        email
         accessLevel
+        user {
+          email
+        }
       }
     }
   }
@@ -29,13 +31,10 @@ export const GET_NOTE = gql`
       isShared
       sharedWith {
         id
-        email
         accessLevel
-      }
-      versions {
-        id
-        content
-        createdAt
+        user {
+          email
+        }
       }
     }
   }

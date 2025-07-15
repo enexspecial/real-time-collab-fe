@@ -1,25 +1,45 @@
-import { useState } from 'react';
-import { useMutation } from '@apollo/client';
-import { RESTORE_VERSION } from '../../graphql/mutations';
+import { useState, useEffect } from 'react';
+import { useNotes } from '../../hooks/useNotes';
 
-export default function VersionHistory({ versions, noteId, onRestore }) {
+export default function VersionHistory({ noteId, onRestore }) {
   const [selectedVersion, setSelectedVersion] = useState(null);
-  const [restoreVersion] = useMutation(RESTORE_VERSION, {
-    onCompleted: () => {
-      onRestore();
-    },
-  });
+  const [versions, setVersions] = useState([]);
+  const { getNoteVersions, restoreNoteVersion, loading } = useNotes();
 
-  const handleRestore = () => {
+  useEffect(() => {
+    const fetchVersions = async () => {
+      try {
+        const versionsData = await getNoteVersions(noteId);
+        setVersions(versionsData);
+      } catch (error) {
+        console.error('Failed to fetch versions:', error);
+      }
+    };
+
+    if (noteId) {
+      fetchVersions();
+    }
+  }, [noteId]);
+
+  const handleRestore = async () => {
     if (selectedVersion) {
-      restoreVersion({
-        variables: {
-          noteId,
-          versionId: selectedVersion.id,
-        },
-      });
+      try {
+        await restoreNoteVersion(noteId, selectedVersion.id);
+        onRestore();
+      } catch (error) {
+        console.error('Failed to restore version:', error);
+        alert('Failed to restore version. Please try again.');
+      }
     }
   };
+
+  if (loading && versions.length === 0) {
+    return (
+      <div className="text-center py-4">
+        <p className="text-gray-500">Loading versions...</p>
+      </div>
+    );
+  }
 
   if (!versions || versions.length === 0) {
     return (
@@ -48,7 +68,7 @@ export default function VersionHistory({ versions, noteId, onRestore }) {
               {new Date(version.createdAt).toLocaleString()}
             </div>
             <div className="text-xs text-gray-500 mt-1 line-clamp-2">
-              {version.content.replace(/<[^>]*>/g, '').substring(0, 100)}...
+              {version.content ? version.content.replace(/<[^>]*>/g, '').substring(0, 100) : 'No content'}...
             </div>
           </div>
         ))}
@@ -58,9 +78,10 @@ export default function VersionHistory({ versions, noteId, onRestore }) {
         <div className="flex justify-end">
           <button
             onClick={handleRestore}
-            className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+            disabled={loading}
+            className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
           >
-            Restore This Version
+            {loading ? 'Restoring...' : 'Restore This Version'}
           </button>
         </div>
       )}

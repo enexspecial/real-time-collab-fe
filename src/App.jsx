@@ -4,6 +4,8 @@ import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
 import NotesPage from './pages/NotesPage';
 import NoteDetailPage from './pages/NoteDetailPage';
+import NotificationToast from './components/Layout/NotificationToast';
+import { useNotifications } from './hooks/useNotifications';
 
 function PrivateRoute({ children }) {
   const { user } = useAuth();
@@ -11,8 +13,10 @@ function PrivateRoute({ children }) {
 }
 
 export default function App() {
+  const { notifications, clearNotification } = useNotifications();
   return (
     <BrowserRouter>
+      <NotificationToast notifications={notifications} onClose={clearNotification} />
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
